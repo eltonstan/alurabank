@@ -1,6 +1,7 @@
 import { NegociacoesView, MensagemView } from '../views/index';
-import { Negociacoes, Negociacao } from '../models/index';
-import { logarTempoDeExecucao } from '../helpers/decorators/index';
+import { Negociacoes, Negociacao, NegociacaoParcial } from '../models/index';
+import { logarTempoDeExecucao, throttle } from '../helpers/decorators/index';
+import { NegociacaoService } from '../services/index';
 
 export class NegociacaoController {
 
@@ -10,6 +11,7 @@ export class NegociacaoController {
     private _negociacoes = new Negociacoes(); 
     private _negociacoesView = new NegociacoesView('#negociacoesView', true);
     private _mensagemView = new MensagemView('#mensagemView', true);
+    private _service = new NegociacaoService();
 
     constructor() {
 
@@ -50,6 +52,22 @@ export class NegociacaoController {
     private _ehDiaUtil(data: Date) {
 
         return data.getDay() != DiaDaSemana.Sabado && data.getDay() != DiaDaSemana.Domingo;
+    }
+
+    @throttle()
+    importaDados() {
+
+        this._service
+            .obterNegociacoes(res => {
+                if(res.ok) return res;
+                throw new Error(res.statusText);
+            })
+            .then(negociacoes => {
+                negociacoes.forEach(negociacao => 
+                    this._negociacoes.adiciona(negociacao));
+                this._negociacoesView.update(this._negociacoes);
+            });
+
     }
 
 }
